@@ -38,69 +38,68 @@ def loading_phase(stdscr):
 
 def scan_wifi():
     try:
-        # Get WiFi information using human-readable format and parse it properly
+        # Get WiFi information using human-readable format and parse by fixed column positions
         result = subprocess.run(['nmcli', '-c', 'no', 'device', 'wifi', 'list'], capture_output=True, text=True, timeout=10)
         devices = []
 
         lines = result.stdout.strip().split('\n')
         if len(lines) > 0:
             for line in lines[1:]:  # Skip header line
-                if line.strip():
-                    # Split on 2+ spaces to handle SSIDs with spaces correctly
-                    parts = re.split(r'\s{2,}', line.strip())
-                    if len(parts) >= 8:
-                        # Parse: IN-USE BSSID SSID MODE CHAN RATE SIGNAL BARS SECURITY
-                        in_use = '*' in parts[0]
-                        bssid = parts[1]
-                        ssid = parts[2] if parts[2] != '--' else '<Hidden>'
-                        mode = parts[3]
-                        channel = parts[4] if parts[4] != '--' else 'Unknown'
-                        rate = parts[5]
-                        signal_part = parts[6].strip('*☆')
-                        security = ' '.join(parts[7:])  # Security might have spaces
+                if line.strip() and len(line) >= 92:  # Ensure full line
+                    # Fixed column positions based on nmcli output format
+                    # IN-USE (0-8), BSSID (8-26), SSID (26-42), MODE (42-49), CHAN (49-55), RATE (55-67), SIGNAL (67-75), BARS (75-81), SECURITY (81-92)
 
-                        # Determine frequency and band from channel
-                        freq = 'Unknown'
-                        band = 'Unknown'
-                        if channel != 'Unknown':
-                            try:
-                                chan_num = int(channel)
-                                if chan_num <= 14:
-                                    freq = '2.4GHz'
-                                    band = '2.4GHz'
-                                elif chan_num >= 36:
-                                    freq = '5GHz'
-                                    band = '5GHz'
-                            except ValueError:
-                                pass
+                    in_use = line[0:8].strip() == '*'
+                    bssid = line[8:26].strip()
+                    ssid = line[26:42].strip() or '<Hidden>'
+                    mode = line[42:49].strip()
+                    channel = line[49:55].strip()
+                    rate = line[55:67].strip()
+                    signal = line[67:75].strip().strip('*☆')
+                    security = line[81:92].strip()
 
-                        # Try to get IP address for connected network
-                        ip_address = 'N/A'
-                        if ssid and ssid != '<Hidden>':
-                            try:
-                                ip_result = subprocess.run(['nmcli', '-t', '-f', 'IP4.ADDRESS', 'connection', 'show', ssid.replace(' ', '_')],
-                                                         capture_output=True, text=True, timeout=5)
-                                ip_line = ip_result.stdout.strip()
-                                if ip_line and '/' in ip_line:
-                                    ip_address = ip_line.split('/')[0]
-                            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
-                                pass
+                    # Determine frequency and band from channel
+                    freq = 'Unknown'
+                    band = 'Unknown'
+                    if channel and channel != '--':
+                        try:
+                            chan_num = int(channel)
+                            if chan_num <= 14:
+                                freq = '2.4GHz'
+                                band = '2.4GHz'
+                            elif chan_num >= 36:
+                                freq = '5GHz'
+                                band = '5GHz'
+                        except ValueError:
+                            pass
 
-                        devices.append({
-                            'type': 'wifi',
-                            'ssid': ssid,
-                            'bssid': bssid,
-                            'mac_address': bssid,
-                            'signal': signal_part,
-                            'security': security.strip(),
-                            'channel': channel,
-                            'frequency': freq,
-                            'max_rate': rate,
-                            'ip_address': ip_address,
-                            'band': band,
-                            'in_use': '*' if in_use else '',
-                            'mode': mode
-                        })
+                    # Try to get IP address for connected network
+                    ip_address = 'N/A'
+                    if ssid and ssid != '<Hidden>':
+                        try:
+                            ip_result = subprocess.run(['nmcli', '-t', '-f', 'IP4.ADDRESS', 'connection', 'show', ssid.replace(' ', '_')],
+                                                     capture_output=True, text=True, timeout=5)
+                            ip_line = ip_result.stdout.strip()
+                            if ip_line and '/' in ip_line:
+                                ip_address = ip_line.split('/')[0]
+                        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                            pass
+
+                    devices.append({
+                        'type': 'wifi',
+                        'ssid': ssid,
+                        'bssid': bssid,
+                        'mac_address': bssid,
+                        'signal': signal,
+                        'security': security,
+                        'channel': channel,
+                        'frequency': freq,
+                        'max_rate': rate,
+                        'ip_address': ip_address,
+                        'band': band,
+                        'in_use': '*' if in_use else '',
+                        'mode': mode
+                    })
 
         return devices
     except subprocess.TimeoutExpired:
