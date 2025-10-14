@@ -51,7 +51,8 @@ def scan_wifi():
 
                     in_use = line[0:8].strip() == '*'
                     bssid = line[8:26].strip()
-                    ssid = line[26:42].strip() or '<Hidden>'
+                    raw_ssid = line[26:42].strip()
+                    ssid = raw_ssid if raw_ssid and raw_ssid != '--' else '<Hidden>'
                     mode = line[42:49].strip()
                     channel = line[49:55].strip()
                     rate = line[55:67].strip()
@@ -278,7 +279,10 @@ def get_device_display_name(device):
     if 'error' in device:
         return f"{device['type'].upper()}: {device['error']}"
     elif device['type'] == 'wifi':
-        return f"WiFi: {device['ssid']} ({device['signal']}% signal)"
+        # Show unique identifier - use last 4 chars of BSSID to differentiate same SSIDs
+        bssid_suffix = device['bssid'][-5:] if device['bssid'] != '--' else '????'
+        channel_info = f" CH{device['channel']}" if device['channel'] and device['channel'] != '--' else ""
+        return f"WiFi: {device['ssid']} ({device['signal']}%{channel_info}) {bssid_suffix}"
     elif device['type'] == 'bluetooth':
         if 'name' in device:
             return f"BT: {device['name']} ({device['address']})"
