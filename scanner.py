@@ -168,12 +168,8 @@ def scan_filesystem(start_path="/", current_os=None):
                             'size': file_size
                         })
 
-                    # Show progress with current file name
-                    if total_scanned % 50 == 0:
-                        short_filename = os.path.basename(filepath)
-                        if len(short_filename) > 30:
-                            short_filename = short_filename[:27] + "..."
-                        print(f"\rScanning: {short_filename} | {total_scanned} files, found {len(suspect_files)} suspicious...", end='', flush=True)
+                    # Clear previous line and show current file being scanned
+                    print(f"\rScanning: {os.path.basename(filepath):<50}", end='', flush=True)
 
             except (PermissionError, OSError):
                 continue
