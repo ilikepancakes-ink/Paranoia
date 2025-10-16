@@ -346,7 +346,7 @@ def main():
     print("\n" + report)
 
     # Save report to file
-    report_file = f"lan_audit_report_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}.txt"
+    report_file = f"lan_audit_report_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}.log"
     try:
         with open(report_file, 'w') as f:
             f.write(report)
